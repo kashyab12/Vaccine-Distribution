@@ -22,7 +22,7 @@ class AgeCompartmentalModel:
             if increment == 0:
                 continue
             for ageBracket in self.ageBrackets:
-                ageBracket.stepIncrement(self.dt, 0.0001)
+                ageBracket.stepIncrement(self.dt, 0)
             for ageBracket in self.ageBrackets:
                 ageBracket.updateIncrement()
 
@@ -43,6 +43,26 @@ class AgeCompartmentalModel:
 # TODO finish this method which totals each ageBracket's seperate equations into one for the total population
     def graphCumulativeModels(self):
         index = 0;
+        cumulativeS, cumulativeE, cumulativeI, cumulativeR, cumulativeV = np.empty(self.t.__len__()), np.empty(self.t.__len__()), np.empty(self.t.__len__()), np.empty(self.t.__len__()), np.empty(self.t.__len__())
+        while index < self.t.__len__():
+            for ageBracket in self.ageBrackets:
+                cumulativeS[index] += ageBracket.pastS[index]
+                cumulativeE[index] += ageBracket.pastE[index]
+                cumulativeI[index] += ageBracket.pastI[index]
+                cumulativeR[index] += ageBracket.pastR[index]
+                cumulativeV[index] += ageBracket.pastV[index]
+            index += 1
+        plt.xlabel("Time(days)")
+        plt.ylabel("Population (million)")
+        plt.plot(self.t, cumulativeS, label="Susceptible", color="blue")
+        plt.plot(self.t, cumulativeE, label="Exposed", color="orange")
+        plt.plot(self.t, cumulativeI, label="Infected", color="red")
+        plt.plot(self.t, cumulativeR, label="Recovered", color="gray")
+        plt.plot(self.t, cumulativeV, label="Vaccinated", color="green")
+
+        plt.title("Cumulative")
+        plt.show()
+
 
 # TODO It may be better to just have S,E,I,R,V as a 2D array to make the code cleaner. This is not a high priority
 # Each age bracket has a set of diff eqs that are used to model the actual trajectories of the disease
@@ -55,7 +75,7 @@ class AgeBracket:
         self.recoveryRate = recoveryRate
         self.contactVector = contactVector
         self.newS, self.newE, self.newI, self.newR, self.newV = 0, 0, 0, 0, 0
-        self.S, self.E, self.I, self.R, self.V = self.population, 0, 1 / self.population, 0, 0
+        self.S, self.E, self.I, self.R, self.V = self.population, 0, 0.000001, 0, 0
         self.pastS, self.pastE, self.pastI, self.pastR, self.pastV = [], [], [], [], []
         self.pastS.append(self.S)
         self.pastE.append(self.E)
@@ -70,13 +90,13 @@ class AgeBracket:
             sum += self.contactVector[index] * bracket.I / bracket.population
         return (1 / len(self.brackets)) * sum * self.S / self.population * self.infectionRate
 
-# TODO This is no incrementing correctly. Must find bug
+# TODO This is not incrementing correctly. Must find bug
     # Increments the set of diff eqs using Euler's method. Ref figure 1 on page 1157
     def stepIncrement(self, dt, dV):
         ir = self.getInfectionRisk()
         self.newS = self.S + ((-ir) * (self.S - dV) - dV) * dt
         self.newE = self.E + ((-self.incubationRate) * self.E + ir * (self.S - dV)) * dt
-        self.newI = self.I + ((-self.recoveryRate) * self.I + ir * self.incubationRate) * dt
+        self.newI = self.I + ((-self.recoveryRate) * self.I + self.incubationRate * self.E) * dt
         self.newR = self.R + (self.recoveryRate * self.I) * dt
         self.newV = self.V + dV * dt
 
@@ -106,7 +126,7 @@ incubationRates = [0.25, 0.25, 0.25, 0.25, 0.25]
 recoveryRates = [0.334, 0.334, 0.334, 0.334, 0.334]
 infectionRates = [0.434, 0.158, 0.118, 0.046, 0.046]
 populations = [0.94, 0.91, 2.30, 1.86, 0.85]
-time = 365
+time = 150
 dt = time / 1000
 acm = AgeCompartmentalModel(contactMatrix, time, populations, infectionRates, recoveryRates, dt)
-acm.graphIndividualModels()
+acm.graphCumulativeModels()
