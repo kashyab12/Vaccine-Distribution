@@ -110,7 +110,7 @@ class AgeCompartmentalModel:
         plt.plot(self.t, cumulativeI, label="Infected", color="red")
         plt.plot(self.t, cumulativeR, label="Recovered", color="gray")
         plt.plot(self.t, cumulativeV, label="Vaccinated", color="green")
-        plt.legend()
+        plt.legend(loc="best")
         plt.title("Cumulative")
         plt.savefig("result.jpg")
         plt.show()
