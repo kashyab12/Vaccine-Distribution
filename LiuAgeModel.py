@@ -22,7 +22,7 @@ class AgeCompartmentalModel:
             if increment == 0:
                 continue
             for ageBracket in self.ageBrackets:
-                ageBracket.stepIncrement(self.dt, 0)
+                ageBracket.stepIncrement(self.dt, 1)
             for ageBracket in self.ageBrackets:
                 ageBracket.updateIncrement()
 
