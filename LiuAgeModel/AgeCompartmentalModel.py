@@ -15,7 +15,9 @@ class AgeBracket:
         self.contactVector = contactVector
         self.dVDistribution = dVDistribution
         self.newS, self.newE, self.newI, self.newR, self.newV = 0, 0, 0, 0, 0
-        self.S, self.E, self.I, self.R, self.V = self.population, 0, 0.000001, 0, 0
+        self.S, self.E, self.I, self.R, self.V = self.population, 0, 0.0000001, 0, 0
+        self.Sv, self.Ev, self.Iv, self.Rv, self.Vv = 0, 0, 0, 0, 0
+        self.newSv, self.newEv, self.newIv, self.newRv, self.newV = 0, 0, 0, 0, 0
         self.pastS, self.pastE, self.pastI, self.pastR, self.pastV = [], [], [], [], []
         self.pastS.append(self.S)
         self.pastE.append(self.E)
@@ -83,7 +85,6 @@ class AgeCompartmentalModel:
             self.totalpopulation += populations[index]
             index += 1
 
-
         # Run Euler's Method on Model
         day = 0
         for increment in self.t:
@@ -94,6 +95,19 @@ class AgeCompartmentalModel:
             for ageBracket in self.ageBrackets:
                 ageBracket.updateIncrement()
             day += self.dt
+
+        index = 0;
+        self.cumulativeS, self.cumulativeE, self.cumulativeI, self.cumulativeR, self.cumulativeV = np.empty(
+            self.t.__len__()), np.empty(self.t.__len__()), np.empty(self.t.__len__()), np.empty(
+            self.t.__len__()), np.empty(self.t.__len__())
+        while index < self.t.__len__():
+            for ageBracket in self.ageBrackets:
+                self.cumulativeS[index] += ageBracket.pastS[index]
+                self.cumulativeE[index] += ageBracket.pastE[index]
+                self.cumulativeI[index] += ageBracket.pastI[index]
+                self.cumulativeR[index] += ageBracket.pastR[index]
+                self.cumulativeV[index] += ageBracket.pastV[index]
+            index += 1
 
     # Graphs each age bracket's set of diff eqs in a separate window.
     def graphIndividualModels(self):
@@ -110,32 +124,21 @@ class AgeCompartmentalModel:
             plt.show()
 
     def graphCumulativeModels(self, inpercent=False):
-        index = 0;
-        cumulativeS, cumulativeE, cumulativeI, cumulativeR, cumulativeV = np.empty(self.t.__len__()), np.empty(self.t.__len__()), np.empty(self.t.__len__()), np.empty(self.t.__len__()), np.empty(self.t.__len__())
-        while index < self.t.__len__():
-            for ageBracket in self.ageBrackets:
-                cumulativeS[index] += ageBracket.pastS[index]
-                cumulativeE[index] += ageBracket.pastE[index]
-                cumulativeI[index] += ageBracket.pastI[index]
-                cumulativeR[index] += ageBracket.pastR[index]
-                cumulativeV[index] += ageBracket.pastV[index]
-            if inpercent:
-                cumulativeS[index] /= self.totalpopulation
-                cumulativeE[index] /= self.totalpopulation
-                cumulativeI[index] /= self.totalpopulation
-                cumulativeR[index] /= self.totalpopulation
-                cumulativeV[index] /= self.totalpopulation
-            index += 1
         plt.xlabel("Time(days)")
         if inpercent:
             plt.ylabel("Population (%)")
+            plt.plot(self.t, self.cumulativeS/self.totalpopulation, label="Susceptible", color="blue")
+            plt.plot(self.t, self.cumulativeE/self.totalpopulation, label="Exposed", color="orange")
+            plt.plot(self.t, self.cumulativeI/self.totalpopulation, label="Infected", color="red")
+            plt.plot(self.t, self.cumulativeR/self.totalpopulation, label="Recovered", color="gray")
+            plt.plot(self.t, self.cumulativeV/self.totalpopulation, label="Vaccinated", color="green")
         else:
             plt.ylabel("Population (millions)")
-        plt.plot(self.t, cumulativeS, label="Susceptible", color="blue")
-        plt.plot(self.t, cumulativeE, label="Exposed", color="orange")
-        plt.plot(self.t, cumulativeI, label="Infected", color="red")
-        plt.plot(self.t, cumulativeR, label="Recovered", color="gray")
-        plt.plot(self.t, cumulativeV, label="Vaccinated", color="green")
+            plt.plot(self.t, self.cumulativeS, label="Susceptible", color="blue")
+            plt.plot(self.t, self.cumulativeE, label="Exposed", color="orange")
+            plt.plot(self.t, self.cumulativeI, label="Infected", color="red")
+            plt.plot(self.t, self.cumulativeR, label="Recovered", color="gray")
+            plt.plot(self.t, self.cumulativeV, label="Vaccinated", color="green")
         plt.legend(loc="best")
         plt.title("Cumulative")
         plt.savefig("result.jpg")

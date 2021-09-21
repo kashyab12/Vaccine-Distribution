@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import AgeCompartmentalModel as ageCompModel
 import MatrixMath as matMath
-
 # Macros
 CSV_DATA_FILE_NAME = "us-contact-matrix.csv"
 
@@ -12,9 +11,13 @@ incubationRates = []
 recoveryRates = []
 infectionRates = []
 vaccineDistributions = []
-Dtrans = []
+Dtrans = [[], [], []]
 Dvulner = []
-T = 50
+startT = 50
+endT=startT+1
+Q = 0.3 - 0.115
+time = 150
+dt = time/1000
 contactMatrix = [[8.27, 1.395, 4.165, 1.51, 0.715],
                  [1.395, 5.65, 2.385, 1.83, 0.895],
                  [4.165, 2.385, 6.55, 3.425, 1.383],
@@ -27,21 +30,35 @@ contactMatrix = [[8.27, 1.395, 4.165, 1.51, 0.715],
 for ctrVariable in range(5):
     incubationRates.append(0.25)
     recoveryRates.append(0.334)
-    vaccineDistributions.append([[T,200,1/150]])
 
 for value in contactMatrix[0]:
-    Dtrans.append([[T,200, value/sum(contactMatrix[0])/100]])
-    print(value, " ", value/sum(contactMatrix[0]))
+    Dtrans[0].append([[0,1, value/sum(contactMatrix[0]) *10* Q/(endT-startT)]])
+    Dtrans[1].append([[50, 51, value / sum(contactMatrix[0]) * 10 * Q / (endT - startT)]])
+    Dtrans[2].append([[100, 101, value / sum(contactMatrix[0]) * 10 * Q / (endT - startT)]])
 
 infectionRates = [0.434, 0.158, 0.118, 0.046, 0.046]
 
 for value in infectionRates:
-    Dvulner.append([[T, 200, value/sum(infectionRates)/100]])
+    Dvulner.append([[startT, endT, value/sum(infectionRates)*Q*10/(endT-startT)]])
 
 populations = [0.94, 0.91, 2.3, 1.86, 0.85]
-time = 364
-dt = time / 1000
-acm = ageCompModel.AgeCompartmentalModel(contactMatrix, time, populations, infectionRates, recoveryRates, incubationRates, dt, Dvulner)
-acm.graphCumulativeModels()
-# acm.graphCumulativeModels(True)
-acm.graphIndividualModels()
+#acmVuln = ageCompModel.AgeCompartmentalModel(contactMatrix, time, populations, infectionRates, recoveryRates, incubationRates, dt, Dvulner)
+#acmTrans = ageCompModel.AgeCompartmentalModel(contactMatrix, time, populations, infectionRates, recoveryRates, incubationRates, dt, Dtrans)
+#acmVuln.graphIndividualModels()
+#acmTrans.graphCumulativeModels()
+# acm.graphIndividualModels()
+
+acm = []
+for dTrans in Dtrans:
+    acm.append(ageCompModel.AgeCompartmentalModel(contactMatrix, time, populations, infectionRates, recoveryRates, incubationRates, dt, dTrans))
+
+def compareInfected(models):
+    for model in models:
+        plt.plot(np.arange(0, time, dt), model.cumulativeI, label="Infected", color="blue")
+    plt.xlabel("Time(days)")
+    plt.ylabel("Population (million)")
+    plt.title("Comparing infected of different deployments")
+    plt.show()
+
+
+compareInfected(acm)
