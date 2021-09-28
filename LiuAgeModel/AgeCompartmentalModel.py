@@ -15,15 +15,19 @@ class AgeBracket:
         self.contactVector = contactVector
         self.dVDistribution = dVDistribution
         self.newS, self.newE, self.newI, self.newR, self.newV = 0, 0, 0, 0, 0
-        self.S, self.E, self.I, self.R, self.V = self.population, 0, 0.0000001, 0, 0
-        self.Sv, self.Ev, self.Iv, self.Rv, self.Vv = 0, 0, 0, 0, 0
+        self.S, self.E, self.I, self.R = self.population, 0, 0.0000001, 0
+        self.Sv, self.Ev, self.Iv, self.Rv = 0, 0, 0, 0
         self.newSv, self.newEv, self.newIv, self.newRv, self.newV = 0, 0, 0, 0, 0
         self.pastS, self.pastE, self.pastI, self.pastR, self.pastV = [], [], [], [], []
+        self.pastSv, self.pastEv, self.pastIv, self.pastRv = [], [], [], []
         self.pastS.append(self.S)
         self.pastE.append(self.E)
         self.pastI.append(self.I)
         self.pastR.append(self.R)
-        self.pastV.append(self.V)
+        self.pastSv.append(self.Sv)
+        self.pastEv.append(self.Ev)
+        self.pastIv.append(self.Iv)
+        self.pastRv.append(self.Rv)
 
     def getdV(self, day, dt):
         index = 0
@@ -47,8 +51,10 @@ class AgeBracket:
         self.newE = self.E + ((-self.incubationRate) * self.E + ir * (self.S - self.getdV(day, dt))) * dt
         self.newI = self.I + ((-self.recoveryRate) * self.I + self.incubationRate * self.E) * dt
         self.newR = self.R + (self.recoveryRate * self.I) * dt
-        self.newV = self.V + self.getdV(day, dt) * dt
-
+        self.newSv = self.Sv + self.getdV(day, dt) * dt
+        self.newEv = self.Ev + ((-self.incubationRate) * self.Ev + ir * self.Sv) * dt
+        self.newIv = self.Iv + ((-self.recoveryRate) * self.Iv + self.incubationRate * self.Ev) * dt
+        self.newRv = self.Rv + (self.recoveryRate * self.Iv) * dt
     # updateIncrement is needed since each set of diff eqs depends on the rest of the age brackets.
     # This means that the actual increment can be performed after all the diff eqs have their new values calculated
     def updateIncrement(self):
@@ -56,12 +62,18 @@ class AgeBracket:
         self.pastE.append(self.E)
         self.pastI.append(self.I)
         self.pastR.append(self.R)
-        self.pastV.append(self.V)
+        self.pastSv.append(self.Sv)
+        self.pastEv.append(self.Ev)
+        self.pastIv.append(self.Iv)
+        self.pastRv.append(self.Rv)
         self.S = self.newS
         self.E = self.newE
         self.I = self.newI
         self.R = self.newR
-        self.V = self.newV
+        self.Sv = self.newSv
+        self.Ev = self.newEv
+        self.Iv = self.newIv
+        self.Rv = self.newRv
 
 
 class AgeCompartmentalModel:
@@ -97,16 +109,22 @@ class AgeCompartmentalModel:
             day += self.dt
 
         index = 0;
-        self.cumulativeS, self.cumulativeE, self.cumulativeI, self.cumulativeR, self.cumulativeV = np.empty(
+        self.cumulativeS, self.cumulativeE, self.cumulativeI, self.cumulativeR = np.empty(
             self.t.__len__()), np.empty(self.t.__len__()), np.empty(self.t.__len__()), np.empty(
-            self.t.__len__()), np.empty(self.t.__len__())
+            self.t.__len__())
+        self.cumulativeSv, self.cumulativeEv, self.cumulativeIv, self.cumulativeRv = np.empty(
+            self.t.__len__()), np.empty(self.t.__len__()), np.empty(self.t.__len__()), np.empty(
+            self.t.__len__())
         while index < self.t.__len__():
             for ageBracket in self.ageBrackets:
                 self.cumulativeS[index] += ageBracket.pastS[index]
                 self.cumulativeE[index] += ageBracket.pastE[index]
                 self.cumulativeI[index] += ageBracket.pastI[index]
                 self.cumulativeR[index] += ageBracket.pastR[index]
-                self.cumulativeV[index] += ageBracket.pastV[index]
+                self.cumulativeSv[index] += ageBracket.pastSv[index]
+                self.cumulativeEv[index] += ageBracket.pastEv[index]
+                self.cumulativeIv[index] += ageBracket.pastIv[index]
+                self.cumulativeRv[index] += ageBracket.pastRv[index]
             index += 1
 
     # Graphs each age bracket's set of diff eqs in a separate window.
@@ -118,7 +136,6 @@ class AgeCompartmentalModel:
             plt.plot(self.t, ageBracket.pastE, label="Exposed", color="orange")
             plt.plot(self.t, ageBracket.pastI, label="Infected", color="red")
             plt.plot(self.t, ageBracket.pastR, label="Recovered", color="gray")
-            plt.plot(self.t, ageBracket.pastV, label="Vaccinated", color="green")
 
             plt.title("SEIRV Model")
             plt.show()
@@ -131,14 +148,12 @@ class AgeCompartmentalModel:
             plt.plot(self.t, self.cumulativeE/self.totalpopulation, label="Exposed", color="orange")
             plt.plot(self.t, self.cumulativeI/self.totalpopulation, label="Infected", color="red")
             plt.plot(self.t, self.cumulativeR/self.totalpopulation, label="Recovered", color="gray")
-            plt.plot(self.t, self.cumulativeV/self.totalpopulation, label="Vaccinated", color="green")
         else:
             plt.ylabel("Population (millions)")
             plt.plot(self.t, self.cumulativeS, label="Susceptible", color="blue")
             plt.plot(self.t, self.cumulativeE, label="Exposed", color="orange")
             plt.plot(self.t, self.cumulativeI, label="Infected", color="red")
             plt.plot(self.t, self.cumulativeR, label="Recovered", color="gray")
-            plt.plot(self.t, self.cumulativeV, label="Vaccinated", color="green")
         plt.legend(loc="best")
         plt.title("Cumulative")
         plt.savefig("result.jpg")
